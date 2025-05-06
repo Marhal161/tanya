@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import styles from "./Card.module.scss"
 import ContentLoader from "react-content-loader"
 import AppContext from '../../context';
@@ -9,26 +9,61 @@ function Card({
   price,
   title,
   imageUrl,
+  image_url,
   onFavorite,
   onClickAdd,
   loading = false,
   favorited = false,
+  ...props
 }) {
+
+  // Проверяем наличие значений и устанавливаем дефолтные, если нужно
+  const safeId = id || '';
+  const safeTitle = title || 'Название кроссовок';
+  const safePrice = price || 0;
+  
+  // Проверяем разные варианты имен поля с URL изображения
+  const safeImageUrl = imageUrl || image_url || props.image || 'img/placeholder.png';
+  
+  useEffect(() => {
+    // Логирование props только один раз при монтировании
+    if (!loading) {
+      console.log('Card FULL props:', props);
+      console.log('Card props:', { id, price, title, imageUrl, image_url });
+      console.log('Using image URL:', safeImageUrl);
+      
+      // Выводим все ключи объекта для отладки
+      const allProps = { id, price, title, imageUrl, image_url, ...props };
+      console.log('All prop keys:', Object.keys(allProps));
+      
+      // Проверяем, есть ли в props другие поля, которые могут содержать URL изображения
+      const possibleImageFields = ['imageUrl', 'image_url', 'image', 'img', 'thumbnail', 'photo'];
+      possibleImageFields.forEach(field => {
+        if (allProps[field]) {
+          console.log(`Found image field '${field}':`, allProps[field]);
+        }
+      });
+    }
+  }, [id, price, title, imageUrl, image_url, loading, safeImageUrl, props]);
 
   // const [isAdded, setIsAdded] = useState(added);
   const [isFavorite, setisFavorite] = React.useState(favorited);
   const { isItemAdded } = React.useContext(AppContext);
-  const obj = { id, parentId: id, title, imageUrl, price };
+  const obj = { id: safeId, parentId: safeId, title: safeTitle, imageUrl: safeImageUrl, price: safePrice };
 
   const onClickPlus = () => {
-    onClickAdd(obj);
+    if (onClickAdd) {
+      onClickAdd(obj);
+    }
     // setIsAdded(!isAdded);
   }
 
 
   const onClickFavorite = () => {
-    onFavorite(obj);
-    setisFavorite(!isFavorite);
+    if (onFavorite) {
+      onFavorite(obj);
+      setisFavorite(!isFavorite);
+    }
   }
   // useEffect(() => {
   //   console.log('Переменная  изменилась')
@@ -61,18 +96,23 @@ function Card({
           </div>
           )}
         
-          <img width="100%" height={160} src={imageUrl} alt='Sneakers' />
-          <h5>{title}</h5>
+          <img width="100%" height={160} src={safeImageUrl} alt='Sneakers' 
+            onError={(e) => {
+              console.error('Image loading error:', e);
+              e.target.src = 'img/placeholder.png';
+            }}
+          />
+          <h5>{safeTitle}</h5>
           <div className='d-flex justify-between align-center'>
             <div className='d-flex flex-column'>
               <span>Цена:</span>
-              <b>{price} руб.</b>
+              <b>{safePrice} руб.</b>
             </div>
             {onClickAdd && (
             <img
               className={styles.plus}
         
-              src={isItemAdded(id) ? 'img/btn-checked.svg' : 'img/btn-plus.svg'}
+              src={isItemAdded && safeId && isItemAdded(safeId) ? 'img/btn-checked.svg' : 'img/btn-plus.svg'}
               alt='Plus'
               onClick={onClickPlus}
               />

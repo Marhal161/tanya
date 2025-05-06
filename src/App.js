@@ -2,6 +2,7 @@ import React from "react";
 import { Routes, Route } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { fetchSneakers } from './services/api';
 
 import AppContext from "./context";
 
@@ -10,6 +11,7 @@ import Drawer from "./components/Drawer";
 import Favorites from "./pages/Favorites";
 import Home from "./pages/Home";
 import Orders from "./pages/Orders";
+import Debug from "./pages/Debug";
 
 function App() {
 
@@ -19,76 +21,34 @@ function App() {
   const [cartItems, setCartItems] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [searchValue, setSearchValue] = useState('');
-  // console.log(cartItems)
-
-
-  // useEffect(() => {
-
-  //   // fetch('https://642c1eca208dfe2547288b56.mockapi.io/items')
-  //   //   .then(res => {
-  //   //     return res.json();
-  //   //   })
-  //   //   .then(json => setItems(json));
-
-  //   axios.get('https://642c1eca208dfe2547288b56.mockapi.io/items')
-  //     .then(res => {
-  //       setItems(res.data)
-  //     })
-  //   axios.get('https://642c1eca208dfe2547288b56.mockapi.io/cart')
-  //     .then(res => {
-  //       setCartItems(res.data)
-  //     })
-  //   // axios.get('https://642c1eca208dfe2547288b56.mockapi.io/favorites')
-  //   //   .then(res => {
-  //   //     setFavorites(res.data)
-  //   //   })
-  // }, [])
-
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-
-    async function fetchData() {
-
+    async function loadData() {
       try {
-        const [cartResponse, itemsResponse] = await Promise.all([
-          axios.get('https://642c1eca208dfe2547288b56.mockapi.io/cart'),
-          // const favoritesResponse = await  axios.get('https://642c1eca208dfe2547288b56.mockapi.io/favorites');
-          axios.get('https://642c1eca208dfe2547288b56.mockapi.io/items'),
-        ]);
-        // setIsLoading(true);
-
+        setIsLoading(true);
+        setError(null);
+        const sneakersData = await fetchSneakers();
+        
+        // Проверяем, что получили массив
+        if (Array.isArray(sneakersData)) {
+          setItems(sneakersData);
+        } else {
+          console.error('Received data is not an array:', sneakersData);
+          setItems([]);
+          setError('Ошибка загрузки данных: неверный формат');
+        }
+      } catch (error) {
+        console.error('Failed to load sneakers:', error);
+        setItems([]);
+        setError('Ошибка загрузки данных: ' + (error.message || 'неизвестная ошибка'));
+      } finally {
         setIsLoading(false);
-        setCartItems(cartResponse.data)
-        // setFavorites(favoritesResponse.data)
-        setItems(itemsResponse.data)
-      }
-      catch (error) {
-        alert('ошибка при запросе данных')
       }
     }
-
-    fetchData();
-  }, [])
-
-  // const onAddToCart = (obj) => {
-  //   console.log(obj)
-
-  //     if (cartItems.find(item => item.id === obj.id)) {
-
-  //       setCartItems((prev) => prev.filter((item) => item.id !== obj.id));
-  //       axios.delete(`https://642c1eca208dfe2547288b56.mockapi.io/cart/${obj.id}`);
-  //     } 
-  //     else {
-  //       axios.post('https://642c1eca208dfe2547288b56.mockapi.io/cart', obj);
-
-  //       // 
-  //       setCartItems(prev => [...prev, obj]);
-  //     }
-
-  //   // catch (error) {
-  //   //   alert('Не удалось добавить в избранное')
-  //   // }
-  // }
+    
+    loadData();
+  }, []);
 
   const onAddToCart = async (obj) => {
     // console.log(obj);
@@ -133,13 +93,16 @@ function App() {
   }
 
   const isItemAdded = (id) => {
-    // console.log(id)
-    return cartItems.some((obj) => Number(obj.perentId) === Number(id))
+    // Проверяем, что id существует и cartItems является массивом
+    if (!id || !Array.isArray(cartItems)) {
+      return false;
+    }
+    return cartItems.some((obj) => Number(obj.parentId) === Number(id));
   }
 
   return (
     <AppContext.Provider
-      value={{ items, cartItems, favorites, isItemAdded, onAddToCart, onAddToFavorite, setCartOpened, setCartItems }}>
+      value={{ items, cartItems, favorites, isItemAdded, onAddToCart, onAddToFavorite, setCartOpened, setCartItems, error }}>
       <div className="wrapper clear">
 
         {/* {cartOpened ? <Drawer onClose={()=> setCartOpened(false)} /> : null}  */}
@@ -152,6 +115,12 @@ function App() {
 
         <Header onClickCart={() => setCartOpened(true)} />
 
+        {error && (
+          <div style={{ color: 'red', textAlign: 'center', padding: '20px' }}>
+            {error}
+          </div>
+        )}
+
         <Routes>
           <Route exact path={process.env.PUBLIC_URL + '/'}
             element={
@@ -159,10 +128,6 @@ function App() {
                 searchValue={searchValue}
                 setSearchValue={setSearchValue}
                 onChangeSearchInput={onChangeSearchInput}
-                // items={items}
-                cartItems={cartItems}
-                // onAddToCart={onAddToCart}
-                // onAddToFavorite={onAddToFavorite}
                 isLoading={isLoading}
               />
             } />
@@ -180,6 +145,8 @@ function App() {
               // onAddToFavorite={onAddToFavorite} 
               />
             } />
+          <Route exact path={process.env.PUBLIC_URL + '/debug'}
+            element={<Debug />} />
         </Routes>
 
       </div>

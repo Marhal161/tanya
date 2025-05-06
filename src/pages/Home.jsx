@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Card from '../components/Card'
 import AppContext from '../context';
 
@@ -13,11 +13,28 @@ function Home({
   isLoading }) {
 
   const { items, onAddToCart, onAddToFavorite } = React.useContext(AppContext)
+  
+  useEffect(() => {
+    if (items && items.length > 0) {
+      console.log('Home items array:', items);
+      console.log('First item details:', items[0]);
+    }
+  }, [items]);
 
   const renderItems = () => {
+    // Проверяем, является ли items массивом
+    const itemsArray = Array.isArray(items) ? items : [];
 
-
-    const filtredItems = items && items.filter((item) => item.title.toLowerCase().includes(searchValue.toLowerCase()));
+    // Фильтруем только если есть что фильтровать
+    const filtredItems = searchValue 
+      ? itemsArray.filter((item) => item.title.toLowerCase().includes(searchValue.toLowerCase()))
+      : itemsArray;
+      
+    console.log('Rendering items count:', filtredItems.length);
+    
+    if (filtredItems.length > 0) {
+      console.log('Sample item for rendering:', filtredItems[0]);
+    }
 
     return (isLoading ? [...Array(12)] : filtredItems)
       .map((item, idx) => (
